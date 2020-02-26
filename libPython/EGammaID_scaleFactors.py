@@ -15,8 +15,8 @@ tdrstyle.setTDRStyle()
 effiMin = 0.68
 effiMax = 1.07
 
-sfMin = 0.955# 0.78
-sfMax = 1.045 #1.12
+sfMin = 0.78
+sfMax = 1.12
 
 
 def isFloat( myFloat ):
@@ -30,7 +30,7 @@ def isFloat( myFloat ):
 
 graphColors = [rt.kBlack, rt.kGray+1, rt.kRed +1, rt.kRed-2, rt.kAzure+2, rt.kAzure-1, 
                rt.kSpring-1, rt.kYellow -2 , rt.kYellow+1,
-               rt.kBlack, rt.kBlack, rt.kBlack, 
+               rt.kPink+2, rt.kBlack, rt.kBlack, 
                rt.kBlack, rt.kBlack, rt.kBlack, rt.kBlack, rt.kBlack, rt.kBlack, rt.kBlack ]
 
 
@@ -132,11 +132,11 @@ def EffiGraph1D(effDataList, effMCList, sfList ,nameout, xAxis = 'pT', yAxis = '
     effminmax =  findMinMax( effDataList )
     effiMin = effminmax[0]
     effiMax = effminmax[1]
-
     sfminmax =  findMinMax( sfList )
-#    sfMin = sfminmax[0]
-#    sfMin = 0.94
-#    sfMax = 1.02
+    sfMin = sfminmax[0]
+    sfMax = sfminmax[1]
+    #print "eff min = %i and max =%i " %  (effiMin, effiMax)
+    #print "SF min = %i and max =%i " %  (sfMin, sfMax)
 
     for key in sorted(effDataList.keys()):
         grBinsEffData = effUtil.makeTGraphFromList(effDataList[key], 'min', 'max')
@@ -324,10 +324,16 @@ def doEGM_SFs(filein, lumi, axis = ['pT','eta'] ):
     cDummy.Print( pdfout + "[" )
 
 
-    EffiGraph1D( effGraph.pt_1DGraph_list( False ) , #eff Data
-                 None, 
-                 effGraph.pt_1DGraph_list( True ) , #SF
+    EffiGraph1D( effGraph.pt_1DGraph_list( typeGR =  0 ) , #eff Data
+                 effGraph.pt_1DGraph_list( typeGR =  -1 ), 
+                 effGraph.pt_1DGraph_list( typeGR =  1 ) , #SF
                  pdfout,
+                 xAxis = axis[0], yAxis = axis[1] )
+    #save in a separate pdf
+    EffiGraph1D( effGraph.pt_1DGraph_list(typeGR =  0  ) , #eff Data
+                 effGraph.pt_1DGraph_list(typeGR =  -1  ) , 
+                 effGraph.pt_1DGraph_list(typeGR =  1  ) , #SF
+                 nameOutBase+'_pt_SFonly.png',
                  xAxis = axis[0], yAxis = axis[1] )
     #EffiGraph1D( effGraph.pt_1DGraph_list_customEtaBining(customEtaBining,False) , 
     #             effGraph.pt_1DGraph_list_customEtaBining(customEtaBining,True)   , False, pdfout )
@@ -337,11 +343,18 @@ def doEGM_SFs(filein, lumi, axis = ['pT','eta'] ):
                               effGraph.eta_1DGraph_list( typeGR = +1 ) , # SF
                               pdfout, 
                               xAxis = axis[1], yAxis = axis[0] )
+    #save in a separate pdf
+    EffiGraph1D( effGraph.eta_1DGraph_list( typeGR =  0 ) , # eff Data
+                 effGraph.eta_1DGraph_list( typeGR = -1 ) , # eff MC
+                 effGraph.eta_1DGraph_list( typeGR = +1 ) , # SF
+                 nameOutBase+'_eta_SFonly.png', 
+                 xAxis = axis[1], yAxis = axis[0] )
+
 
     print 'passing c2D.cd(1)...'
     h2EffData = effGraph.ptEtaScaleFactor_2DHisto(-3)
     h2EffMC   = effGraph.ptEtaScaleFactor_2DHisto(-2)
-    h2SF      = effGraph.ptEtaScaleFactor_2DHisto(-1)
+    h2SF      = effGraph.ptEtaScaleFactor_2DHisto(-1) #save scale factors and errors h2.SetBinError  (ix,iy, self.effList[ptBin][etaBin].systCombined / averageMC )
     h2Error   = effGraph.ptEtaScaleFactor_2DHisto( 0)  ## only error bars
     print 'paso...'
 
@@ -351,11 +364,11 @@ def doEGM_SFs(filein, lumi, axis = ['pT','eta'] ):
 
     c2D = rt.TCanvas('canScaleFactor','canScaleFactor',900,600)
     c2D.Divide(2,1)
-    c2D.GetPad(1).SetRightMargin(0.15)
-    c2D.GetPad(1).SetLeftMargin( 0.15)
+    c2D.GetPad(1).SetRightMargin(0.17)
+    c2D.GetPad(1).SetLeftMargin( 0.17)
     c2D.GetPad(1).SetTopMargin(  0.10)
-    c2D.GetPad(2).SetRightMargin(0.15)
-    c2D.GetPad(2).SetLeftMargin( 0.15)
+    c2D.GetPad(2).SetRightMargin(0.17)
+    c2D.GetPad(2).SetLeftMargin( 0.17)
     c2D.GetPad(2).SetTopMargin(  0.10)
     c2D.GetPad(1).SetLogy()
     c2D.GetPad(2).SetLogy()
@@ -364,16 +377,22 @@ def doEGM_SFs(filein, lumi, axis = ['pT','eta'] ):
     dmin = 1.0 - h2SF.GetMinimum()
     dmax = h2SF.GetMaximum() - 1.0
     dall = max(dmin,dmax)
+    h2SF.GetXaxis().SetLabelSize(0.05)
+    h2SF.GetYaxis().SetLabelSize(0.05)
+    h2SF.GetZaxis().SetLabelSize(0.03)
     h2SF.SetMinimum(1-dall)
     h2SF.SetMaximum(1+dall)
     h2SF.DrawCopy("colz TEXT45")
     
     c2D.cd(2)
+    h2Error.GetZaxis().SetLabelSize(0.03)
     h2Error.SetMinimum(0)
     h2Error.SetMaximum(min(h2Error.GetMaximum(),0.2))    
     h2Error.DrawCopy("colz TEXT45")
 
     c2D.Print( pdfout )
+
+    c2D.SaveAs(nameOutBase+'_ScaleFactorsonly.png')
 
     rootout = rt.TFile(nameOutBase + '_EGM2D.root','recreate')
     rootout.cd()

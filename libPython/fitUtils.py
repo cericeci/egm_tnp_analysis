@@ -90,10 +90,13 @@ def histFitterNominal( sample, tnpBin, tnpWorkspaceParam ):
         "RooCMSShape::bkgFail(x, acmsF, betaF, gammaF, peakF)",
         ]
 
+    print ' ************ histFitterNominal '
+    
+
     tnpWorkspace = []
     tnpWorkspace.extend(tnpWorkspaceParam)
     tnpWorkspace.extend(tnpWorkspaceFunc)
-    
+
     ## init fitter
     infile = rt.TFile( sample.histFile, "read")
     hP = infile.Get('%s_Pass' % tnpBin['name'] )
@@ -111,18 +114,21 @@ def histFitterNominal( sample, tnpBin, tnpWorkspaceParam ):
     fileTruth  = rt.TFile(sample.mcRef.histFile,'read')
     histZLineShapeP = fileTruth.Get('%s_Pass'%tnpBin['name'])
     histZLineShapeF = fileTruth.Get('%s_Fail'%tnpBin['name'])
+    #Barbara commented out July 9th
     if ptMin( tnpBin ) > minPtForSwitch: 
         histZLineShapeF = fileTruth.Get('%s_Pass'%tnpBin['name'])
+
 #        fitter.fixSigmaFtoSigmaP()
     fitter.setZLineShapes(histZLineShapeP,histZLineShapeF)
 
     fileTruth.Close()
-
+    
     ### set workspace
     workspace = rt.vector("string")()
     for iw in tnpWorkspace:
         workspace.push_back(iw)
     fitter.setWorkspace( workspace )
+
 
     title = tnpBin['title'].replace(';',' - ')
     title = title.replace('probe_sc_eta','#eta_{SC}')
@@ -130,6 +136,7 @@ def histFitterNominal( sample, tnpBin, tnpWorkspaceParam ):
     fitter.fits(sample.mcTruth,title)
     rootfile.Close()
 
+    print '>>>>>> End ************ histFitterNominal '
 
 
 #############################################################
@@ -157,8 +164,10 @@ def histFitterAltSig( sample, tnpBin, tnpWorkspaceParam ):
     hF = infile.Get('%s_Fail' % tnpBin['name'] )
     ## for high pT change the failing spectra to passing probe to get statistics 
     ## MC only: this is to get MC parameters in data fit!
+    #Barbara commented out July 9th
     if sample.isMC and ptMin( tnpBin ) > minPtForSwitch:     
         hF = infile.Get('%s_Pass' % tnpBin['name'] )
+    
     fitter = tnpFitter( hP, hF, tnpBin['name'] )
 #    fitter.fixSigmaFtoSigmaP()
     infile.Close()
@@ -168,9 +177,21 @@ def histFitterAltSig( sample, tnpBin, tnpWorkspaceParam ):
     fitter.setOutputFile( rootfile )
     
     ## generated Z LineShape
-    fileTruth = rt.TFile('etc/inputs/ZeeGenLevel.root','read')
-    histZLineShape = fileTruth.Get('Mass')
-    fitter.setZLineShapes(histZLineShape,histZLineShape)
+    #Barbara commented out July 9th
+    #fileTruth = rt.TFile('etc/inputs/ZeeGenLevel.root','read')
+    #histZLineShape = fileTruth.Get('Mass')
+    #fitter.setZLineShapes(histZLineShape,histZLineShape)
+    #fileTruth.Close()
+    # changed by Barbara
+    fileTruth  = rt.TFile(sample.mcRef.histFile,'read')
+    histZLineShapeP = fileTruth.Get('%s_Pass'%tnpBin['name'])
+    histZLineShapeF = fileTruth.Get('%s_Fail'%tnpBin['name'])
+    #Barbara commented out July 9th
+    if ptMin( tnpBin ) > minPtForSwitch: 
+        histZLineShapeF = fileTruth.Get('%s_Pass'%tnpBin['name'])
+
+#        fitter.fixSigmaFtoSigmaP()
+    fitter.setZLineShapes(histZLineShapeP,histZLineShapeF)
     fileTruth.Close()
 
     ### set workspace
@@ -223,7 +244,8 @@ def histFitterAltBkg( sample, tnpBin, tnpWorkspaceParam ):
     histZLineShapeF = fileTruth.Get('%s_Fail'%tnpBin['name'])
     if ptMin( tnpBin ) > minPtForSwitch: 
         histZLineShapeF = fileTruth.Get('%s_Pass'%tnpBin['name'])
-#        fitter.fixSigmaFtoSigmaP()
+
+    #fitter.fixSigmaFtoSigmaP()
     fitter.setZLineShapes(histZLineShapeP,histZLineShapeF)
     fileTruth.Close()
 

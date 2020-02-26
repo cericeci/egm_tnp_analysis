@@ -44,6 +44,7 @@ class efficiency:
 
 
     def combineSyst(self,averageEffData,averageEffMC):
+        print '------ Combining Systematics ---------'
         systAltBkg      = self.altEff[self.iAltBkgModel] - averageEffData
         systAltSig      = self.altEff[self.iAltSigModel] - averageEffData
         systAltMC       = self.altEff[self.iAltMCSignal] - averageEffMC
@@ -72,9 +73,18 @@ class efficiency:
         self.systCombined = 0
         for isyst in range(6):
             self.systCombined += self.syst[isyst]*self.syst[isyst];
+            #print 'Error syst: %s,%1.3f'%(isyst,self.syst[isyst])
+        #print out: 
+        print 'errEffData      : %1.3f'%(self.syst[0])
+        print 'errEffMC        : %1.3f'%(self.syst[1])
+        print 'systAltBkg      : %1.3f'%(self.syst[2])
+        print 'systAltSig      : %1.3f'%(self.syst[3])
+        print '>>> systAltMC       : %1.3f'%(self.syst[4])
+        print 'systAltTagSelec : %1.3f'%(self.syst[5])
 
         self.systCombined = math.sqrt(self.systCombined)
-        
+        print 'Combined error: %1.3f, averageEffData %1.3f, averageEffMC, %1.3f'%(self.systCombined,averageEffData,averageEffMC)
+
 
     def __add__(self,eff):
         if self.effData < 0 :
@@ -255,28 +265,38 @@ class efficiencyList:
         xbins.sort()
         ybins.sort()
         ## transform to numpy array for ROOT
-        #xbinsTab = np.array(xbins)
-        #ybinsTab = np.array(ybins)
-        xbinsTab = array('f',xbins)
-        ybinsTab = array('f',ybins)
+        xbinsTab = np.array(xbins)
+        ybinsTab = np.array(ybins)
+        #xbinsTab = array('f',xbins)
+        #ybinsTab = array('f',ybins)
 
         htitle = '#mu scale factors'
         hname  = 'h2_scaleFactorsMuon' 
         if onlyError >= 0:
-            htitle = '#mu uncertainties'
+            htitle = 'uncertainties'
             hname  = 'h2_uncertaintiesMuon'             
+        if onlyError == -3:
+            htitle = 'Data eff'
+            hname  = 'h2_dataeff' 
+        if onlyError == -2:
+            htitle = 'MC eff'
+            hname  = 'h2_MCeff' 
+        if onlyError == -1:
+            htitle = 'Scale Factors'
+            hname  = 'h2_scaleFactors' 
+
 
         #import os
         #print 'hname = ', hname
         #print 'htitle = ', htitle
         #print 'xbinsTab.size-1 = ', xbinsTab.size-1
-        #print 'xbinsTab = ', xbinsTab
+        print 'xbinsTab = ', xbinsTab
         #print 'ybinsTab.size-1 = ', ybinsTab.size-1
-        #print 'ybinsTab = ', ybinsTab
+        print 'ybinsTab = ', ybinsTab
         #h2dd = rt.TH2F(hname,htitle,xbinsTab.size-1,xbinsTab,ybinsTab.size-1,ybinsTab)
         h2 = rt.TH2F(hname,htitle,len(xbinsTab)-1,xbinsTab,len(ybinsTab)-1,ybinsTab)
 
-        print 'Llega!!!'
+        #print 'Llega!!!'
         ## init histogram efficiencies and errors to 100%
         for ix in range(1,h2.GetXaxis().GetNbins()+1):
             for iy in range(1,h2.GetYaxis().GetNbins()+1):
@@ -285,13 +305,17 @@ class efficiencyList:
         
         for ix in range(1,h2.GetXaxis().GetNbins()+1):
             for iy in range(1,h2.GetYaxis().GetNbins()+1):
-
+                #print 'Checking Bins (ix, iy: %1.3f,%1.3f))'% (ix,iy)
                 for ptBin in self.effList.keys():
                     if h2.GetYaxis().GetBinLowEdge(iy) < ptBin[0] or h2.GetYaxis().GetBinUpEdge(iy) > ptBin[1]:
+                        #print '>>> pT Values: %1.3f,%1.3f,%1.3f,%1.3f '%(h2.GetYaxis().GetBinLowEdge(iy), ptBin[0], h2.GetYaxis().GetBinUpEdge(iy), ptBin[1])
                         continue
                     for etaBin in self.effList[ptBin].keys():
                         if h2.GetXaxis().GetBinLowEdge(ix) < etaBin[0] or h2.GetXaxis().GetBinUpEdge(ix) > etaBin[1]:
+                            #print '>>> eta Values: %1.3f,%1.3f,%1.3f,%1.3f '%(h2.GetXaxis().GetBinLowEdge(ix), etaBin[0], h2.GetXaxis().GetBinUpEdge(ix), etaBin[1])
                             continue
+
+                        #print '   Survive checks (ix, iy: %1.3f,%1.3f))'% (ix,iy)
 
                         ## average MC efficiency
                         etaBinPlus  = etaBin
@@ -321,7 +345,9 @@ class efficiencyList:
                             h2.SetBinError  (ix,iy, 0 )
                         elif onlyError == -1 :
                             h2.SetBinContent(ix,iy, self.effList[ptBin][etaBin].effData      / self.effList[ptBin][etaBin].effMC)
+                            print 'BinContent (ix, iy: %1.3f,%1.3f) ; (effData, effMC: %1.3f,%1.3f)'% (ix,iy,self.effList[ptBin][etaBin].effData,self.effList[ptBin][etaBin].effMC)
                             h2.SetBinError  (ix,iy, self.effList[ptBin][etaBin].systCombined / averageMC )
+                            print 'Error BinContent (ix, iy: %1.3f,%1.3f) ; (systCombined/averageMC: %1.3f)'% (ix,iy,self.effList[ptBin][etaBin].systCombined/averageMC)
 
                         if onlyError   == 0 :
                                 h2.SetBinContent(ix,iy, self.effList[ptBin][etaBin].systCombined      / averageMC  )
@@ -336,7 +362,7 @@ class efficiencyList:
         return h2
         
                                 
-    def pt_1DGraph_list(self, doScaleFactor):
+    def pt_1DGraph_list(self,  typeGR = 0):
 #        self.symmetrizeSystVsEta()
         self.combineSyst()
         listOfGraphs = {}
@@ -365,9 +391,13 @@ class efficiencyList:
                     effAverage.combineSyst(effAverage.effData,effAverage.effMC)
                     aValue  = effAverage.effData
                     anError = effAverage.systCombined 
-                    if doScaleFactor :
+                    if typeGR == 1:
                         aValue  = effAverage.effData      / effAverage.effMC
                         anError = effAverage.systCombined / effAverage.effMC  
+                    if typeGR == -1:
+                        aValue  = effAverage.effMC
+                        anError = 0#effAverage.errEffMC
+                    
                     listOfGraphs[etaBin].append( {'min': ptBin[0], 'max': ptBin[1],
                                                   'val': aValue  , 'err': anError } ) 
                                                   
