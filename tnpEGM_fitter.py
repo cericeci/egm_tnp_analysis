@@ -19,6 +19,7 @@ parser.add_argument('--doPlot'     , action='store_true'  , help = 'plotting')
 parser.add_argument('--sumUp'      , action='store_true'  , help = 'sum up efficiencies')
 parser.add_argument('--iBin'       , dest = 'binNumber'   , type = int,  default=-1, help='bin number (to refit individual bin)')
 parser.add_argument('--flag'       , default = None       , help ='WP to test')
+parser.add_argument('--doParallel' , default = 1          , type = int, help ='Get histograms using multiple cores. If it is one will just run standard 1D')
 parser.add_argument('settings'     , default = None       , help = 'setting file [mandatory]')
 
 
@@ -81,6 +82,7 @@ tnpBins = pickle.load( open( '%s/bining.pkl'%(outputDirectory),'rb') )
 ##### Create Histograms
 ####################################################################
 for s in tnpConf.samplesDef.keys():
+    if (s == "mcAlt" or s == "tagSel"): continue
     sample =  tnpConf.samplesDef[s]
     if sample is None: continue
     setattr( sample, 'tree'     ,'Events' ) # %s/tnpEGM_fitter.py:
@@ -88,10 +90,10 @@ for s in tnpConf.samplesDef.keys():
 
 
 if args.createHists:
-
     import libPython.histUtils as tnpHist
 
     for sampleType in tnpConf.samplesDef.keys():
+        if (sampleType == "mcAlt" or sampleType == "tagSel"): continue
         sample =  tnpConf.samplesDef[sampleType]
         if sample is None : continue
         if sampleType == args.sample or args.sample == 'all' :
@@ -100,9 +102,29 @@ if args.createHists:
             var = { 'name' : 'TnP_mass', 'nbins' : 80, 'min' : 50, 'max': 130 }
             if sample.mcTruth:
                 var = { 'name' : 'TnP_mass', 'nbins' : 80, 'min' : 50, 'max': 130 }
-            tnpHist.makePassFailHistograms( sample, tnpConf.flags[args.flag], tnpBins, var )
 
-    sys.exit(0)
+            if args.doParallel == 1:
+                tnpHist.makePassFailHistograms( sample, tnpConf.flags[args.flag], tnpBins, var)
+            else:
+                print "Running in multicore mode (experimental) with %i cores"%args.doParallel
+                from multiprocessing import Pool
+                from contextlib import closing
+                import time
+                def execute(jobid):
+                  tnpHist.makePassFailHistograms( sample, tnpConf.flags[args.flag], tnpBins, var, [args.doParallel, jobid])
+
+                with closing(Pool(args.doParallel)) as p:
+                  print "Now running " + str(args.doParallel) + " commands using: " + str(args.doParallel) + " processes. Please wait" 
+                  retlist1 = p.map_async(execute, range(1,args.doParallel+1), 1)
+                  while not retlist1.ready():
+                    time.sleep(1)
+                  retlist1 = retlist1.get()
+                  p.close()
+                  p.join()
+                  p.terminate()
+            # And now merge the things
+            os.system("hadd %s %s"%(sample.histFile,sample.histFile.replace(".root","_part*.root")))
+
 
 
 ####################################################################
@@ -220,6 +242,7 @@ if args.sumUp:
             effis['tagSel'][0],
             )
         print astr
+
         fOut.write( astr + '\n' )
     fOut.close()
 

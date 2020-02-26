@@ -79,6 +79,7 @@ tnpFitter::tnpFitter(TH1 *hPass, TH1 *hFail, std::string histname  ) : _useMinos
   RooMsgService::instance().setGlobalKillBelow(RooFit::WARNING);
   _histname_base = histname;
   
+
   _nTotP = hPass->Integral();
   _nTotF = hFail->Integral();
   /// MC histos are done between 50-130 to do the convolution properly
@@ -130,6 +131,7 @@ void tnpFitter::setWorkspace(std::vector<std::string> workspace) {
 void tnpFitter::fits(bool mcTruth,string title) {
 
   cout << " title : " << title << endl;
+  cout << " using Minos ??? : " << _useMinos << endl;
 
   
   RooAbsPdf *pdfPass = _work->pdf("pdfPass");
@@ -157,12 +159,15 @@ void tnpFitter::fits(bool mcTruth,string title) {
   RooFitResult* resPass = pdfPass->fitTo(*_work->data("hPass"),Minos(_useMinos),SumW2Error(kTRUE),Save(),Range("fitMassRange"));
   //RooFitResult* resPass = pdfPass->fitTo(*_work->data("hPass"),Minos(_useMinos),SumW2Error(kTRUE),Save());
   if( _fixSigmaFtoSigmaP ) {
-    _work->var("sigmaF")->setVal( _work->var("sigmaP")->getVal() );
+    cout << "**************************" << endl;
+    cout << "<<< fixSigmaFtoSigmaP >>>" << endl;
+    cout << "**************************" << endl;
+     _work->var("sigmaF")->setVal( _work->var("sigmaP")->getVal() );
     _work->var("sigmaF")->setConstant();
+  }else{
+    _work->var("sigmaF")->setVal(_work->var("sigmaP")->getVal());
+    _work->var("sigmaF")->setRange(0.8* _work->var("sigmaP")->getVal(), 3.0* _work->var("sigmaP")->getVal());
   }
-
-  _work->var("sigmaF")->setVal(_work->var("sigmaP")->getVal());
-  _work->var("sigmaF")->setRange(0.8* _work->var("sigmaP")->getVal(), 3.0* _work->var("sigmaP")->getVal());
   RooFitResult* resFail = pdfFail->fitTo(*_work->data("hFail"),Minos(_useMinos),SumW2Error(kTRUE),Save(),Range("fitMassRange"));
   //RooFitResult* resFail = pdfFail->fitTo(*_work->data("hFail"),Minos(_useMinos),SumW2Error(kTRUE),Save());
 
