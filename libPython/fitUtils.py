@@ -81,7 +81,7 @@ def createWorkspaceForAltSig( sample, tnpBin, tnpWorkspaceParam ):
 #############################################################
 ########## nominal fitter
 #############################################################
-def histFitterNominal( sample, tnpBin, tnpWorkspaceParam ):
+def histFitterNominal( sample, tnpBin, tnpWorkspaceParam, chunk = -1):
         
     tnpWorkspaceFunc = [
         "Gaussian::sigResPass(x,meanP,sigmaP)",
@@ -106,7 +106,11 @@ def histFitterNominal( sample, tnpBin, tnpWorkspaceParam ):
 
     ## setup
     fitter.useMinos()
-    rootfile = rt.TFile(sample.nominalFit,'update')
+    if chunk == -1:
+        rootfile = rt.TFile(sample.nominalFit,'update')
+    else:
+        rootfile = rt.TFile(sample.nominalFit.replace(".root","_part%i.root"%chunk),'update')
+
     fitter.setOutputFile( rootfile )
     
     ## generated Z LineShape
@@ -142,7 +146,7 @@ def histFitterNominal( sample, tnpBin, tnpWorkspaceParam ):
 #############################################################
 ########## alternate signal fitter
 #############################################################
-def histFitterAltSig( sample, tnpBin, tnpWorkspaceParam ):
+def histFitterAltSig( sample, tnpBin, tnpWorkspaceParam , chunk=-1):
 
     tnpWorkspacePar = createWorkspaceForAltSig( sample,  tnpBin, tnpWorkspaceParam )
 
@@ -173,7 +177,11 @@ def histFitterAltSig( sample, tnpBin, tnpWorkspaceParam ):
     infile.Close()
 
     ## setup
-    rootfile = rt.TFile(sample.altSigFit,'update')
+    if chunk == -1:
+        rootfile = rt.TFile(sample.altSigFit,'update')
+    else:
+        rootfile = rt.TFile(sample.altSigFit.replace(".root","_part%i.root"%chunk),'update')
+
     fitter.setOutputFile( rootfile )
     
     ## generated Z LineShape
@@ -212,7 +220,7 @@ def histFitterAltSig( sample, tnpBin, tnpWorkspaceParam ):
 #############################################################
 ########## alternate background fitter
 #############################################################
-def histFitterAltBkg( sample, tnpBin, tnpWorkspaceParam ):
+def histFitterAltBkg( sample, tnpBin, tnpWorkspaceParam, chunk=-1):
 
     tnpWorkspaceFunc = [
         "Gaussian::sigResPass(x,meanP,sigmaP)",
@@ -233,7 +241,11 @@ def histFitterAltBkg( sample, tnpBin, tnpWorkspaceParam ):
     infile.Close()
 
     ## setup
-    rootfile = rt.TFile(sample.altBkgFit,'update')
+    if chunk == -1:
+        rootfile = rt.TFile(sample.altBkgFit,'update')
+    else:
+        rootfile = rt.TFile(sample.altBkgFit.replace(".root","_part%i.root"%chunk),'update')
+
     fitter.setOutputFile( rootfile )
 #    fitter.setFitRange(65,115)
 

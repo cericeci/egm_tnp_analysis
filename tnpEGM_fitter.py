@@ -93,7 +93,6 @@ if args.createHists:
     import libPython.histUtils as tnpHist
 
     for sampleType in tnpConf.samplesDef.keys():
-        if (sampleType == "mcAlt" or sampleType == "tagSel"): continue
         sample =  tnpConf.samplesDef[sampleType]
         if sample is None : continue
         if sampleType == args.sample or args.sample == 'all' :
@@ -124,7 +123,7 @@ if args.createHists:
                   p.terminate()
             # And now merge the things
             os.system("hadd %s %s"%(sample.histFile,sample.histFile.replace(".root","_part*.root")))
-
+            os.system("rm " + sample.histFile,sample.histFile.replace(".root","_part*.root"))
 
 
 ####################################################################
@@ -156,15 +155,48 @@ if args.mcSig :
 
 if  args.doFit:
     sampleToFit.dump()
-    for ib in range(len(tnpBins['bins'])):
-        if (args.binNumber >= 0 and ib == args.binNumber) or args.binNumber < 0:
-            if args.altSig:                 
-                tnpRoot.histFitterAltSig(  sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParAltSigFit )
-            elif args.altBkg:
-                tnpRoot.histFitterAltBkg(  sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParAltBkgFit )
-            else:
-                tnpRoot.histFitterNominal( sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParNomFit )
+    if args.doParallel == 1:
+        for ib in range(len(tnpBins['bins'])):
+            if (args.binNumber >= 0 and ib == args.binNumber) or args.binNumber < 0:
+                if args.altSig:                 
+                    tnpRoot.histFitterAltSig(  sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParAltSigFit )
+                elif args.altBkg:
+                    tnpRoot.histFitterAltBkg(  sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParAltBkgFit )
+                else:
+                    tnpRoot.histFitterNominal( sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParNomFit )
+    else:
+        print "Running in multicore mode (experimental) with %i cores"%args.doParallel
+        from multiprocessing import Pool
+        from contextlib import closing
+        import time
+        def execute(ib):
+            if (args.binNumber >= 0 and ib == args.binNumber) or args.binNumber < 0:
+                if args.altSig:                 
+                    tnpRoot.histFitterAltSig(  sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParAltSigFit, ib )
+                elif args.altBkg:
+                    tnpRoot.histFitterAltBkg(  sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParAltBkgFit, ib )
+                else:
+                    tnpRoot.histFitterNominal( sampleToFit, tnpBins['bins'][ib], tnpConf.tnpParNomFit, ib )
 
+        with closing(Pool(args.doParallel)) as p:
+            print "Now running " + str(len(tnpBins['bins'])) + " commands using: " + str(args.doParallel) + " processes. Please wait" 
+            retlist1 = p.map_async(execute, range(len(tnpBins['bins'])), 1)
+            while not retlist1.ready():
+              time.sleep(1)
+            retlist1 = retlist1.get()
+            p.close()
+            p.join()
+            p.terminate()
+        # And now merge the things
+        if args.altSig:
+            os.system("hadd %s %s"%(sampleToFit.altSigFit,sampleToFit.altSigFit.replace(".root","_part*.root")))
+            os.system("rm " + sampleToFit.altSigFit.replace(".root","_part*.root"))
+        elif args.altBkg:
+            os.system("hadd %s %s"%(sampleToFit.altBkgFit,sampleToFit.altBkgFit.replace(".root","_part*.root")))
+            os.system("rm " + sampleToFit.altBkgFit.replace(".root","_part*.root"))
+        else:
+            os.system("hadd %s %s"%(sampleToFit.nominalFit,sampleToFit.nominalFit.replace(".root","_part*.root")))
+            os.system("rm " + sampleToFit.nominalFit.replace(".root","_part*.root"))
     args.doPlot = True
      
 ####################################################################
