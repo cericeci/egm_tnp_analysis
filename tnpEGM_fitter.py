@@ -20,6 +20,8 @@ parser.add_argument('--sumUp'      , action='store_true'  , help = 'sum up effic
 parser.add_argument('--iBin'       , dest = 'binNumber'   , type = int,  default=-1, help='bin number (to refit individual bin)')
 parser.add_argument('--flag'       , default = None       , help ='WP to test')
 parser.add_argument('--doParallel' , default = 1          , type = int, help ='Get histograms using multiple cores. If it is one will just run standard 1D')
+parser.add_argument('--configureFile' , default = None    , help = 'File with alternative fitting configurations for fine tuning')
+parser.add_argument('--configureType'      , default = None    , help = 'Which alternative fitting configuration to use')
 parser.add_argument('settings'     , default = None       , help = 'setting file [mandatory]')
 
 
@@ -123,7 +125,7 @@ if args.createHists:
                   p.terminate()
             # And now merge the things
             os.system("hadd %s %s"%(sample.histFile,sample.histFile.replace(".root","_part*.root")))
-            os.system("rm " + sample.histFile,sample.histFile.replace(".root","_part*.root"))
+            os.system("rm " + sample.histFile.replace(".root","_part*.root"))
 
 
 ####################################################################
@@ -155,6 +157,14 @@ if args.mcSig :
 
 if  args.doFit:
     sampleToFit.dump()
+    if args.configureFile:
+      importSetting = 'import %s as cfgFil' % args.configureFile.replace('/','.').split('.py')[0]
+      print importSetting
+      exec(importSetting)
+      if args.altBkg: tnpConf.tnpParAltBkgFit = cfgFil.tnpParAltBkgFit[args.configureType]
+      elif args.altSig: tnpConf.tnpParAltSigFit = cfgFil.tnpParAltSigFit[args.configureType]
+      else: tnpConf.tnpParNomFit    = cfgFil.tnpParNomFit[args.configureType]
+
     if args.doParallel == 1:
         for ib in range(len(tnpBins['bins'])):
             if (args.binNumber >= 0 and ib == args.binNumber) or args.binNumber < 0:
@@ -262,10 +272,9 @@ if args.sumUp:
             astr = '### var2 : %s' % v2Range[1]
             print astr
             fOut.write( astr + '\n' )
-            
         astr =  '%+8.3f\t%+8.3f\t%+8.3f\t%+8.3f\t%5.3f\t%5.3f\t%5.3f\t%5.3f\t%5.3f\t%5.3f\t%5.3f\t%5.3f' % (
-            float(v1Range[0]), float(v1Range[2]),
-            float(v2Range[0]), float(v2Range[2]),
+            float(v1Range[0]), float(v1Range[-1]),
+            float(v2Range[0]), float(v2Range[-1]),
             effis['dataNominal'][0],effis['dataNominal'][1],
             effis['mcNominal'  ][0],effis['mcNominal'  ][1],
             effis['dataAltBkg' ][0],
